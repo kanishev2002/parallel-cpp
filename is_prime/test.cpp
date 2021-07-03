@@ -23,6 +23,11 @@ TEST(IsPrime, big_prime) {
   ASSERT_TRUE(IsPrime(115249));
 }
 
+TEST(IsPrime, big_composite) {
+  TimeoutGuard guard(100ms);
+  ASSERT_FALSE(IsPrime(503 * 503));
+}
+
 TEST(IsPrime, Even) {
   TimeoutGuard guard(500ms);
   for (size_t i = 4; i < 10000000; i += 2) {
