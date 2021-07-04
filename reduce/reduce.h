@@ -11,12 +11,12 @@ T parallel_reduce(RandomAccessIterator begin, RandomAccessIterator end,
                   const T& initial_value, Func func, size_t n_threads) {
   std::atomic<T> result{initial_value};
   const size_t size = static_cast<size_t>(end - begin);
-  const size_t items_per_thread = size / n_threads;
+  // const size_t items_per_thread = size / n_threads;
   std::vector<std::thread> threads;
-  for (size_t i = 0; i < n_threads - 1; i += items_per_thread) {
+  for (size_t i = 0; i < n_threads; ++i) {
     threads.emplace_back([&, i] {
-      auto from = std::next(begin, i);
-      auto to = std::next(from, items_per_thread);
+      auto from = begin + (i * size) / n_threads;
+      auto to = begin + ((i + 1) * size) / n_threads;
       for (; from != to; ++from) {
         // result.store(func(result.load(), *from));
         T tmp(result.load());
@@ -26,16 +26,6 @@ T parallel_reduce(RandomAccessIterator begin, RandomAccessIterator end,
       }
     });
   }
-  threads.emplace_back([&] {
-    for (auto from = std::next(begin, (n_threads - 1) * items_per_thread);
-         from != end; ++from) {
-      T tmp = result.load();
-      // result = func(result, *from);
-      while (!result.compare_exchange_weak(tmp, func(*from, result))) {
-        std::this_thread::yield();
-      }
-    }
-  });
   for (auto& thread : threads) {
     thread.join();
   }
