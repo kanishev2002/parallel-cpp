@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <iterator>
+#include <numeric>
 #include <thread>
 #include <vector>
 
@@ -13,21 +14,21 @@ T parallel_reduce(RandomAccessIterator begin, RandomAccessIterator end,
   const size_t size = static_cast<size_t>(end - begin);
   // const size_t items_per_thread = size / n_threads;
   std::vector<std::thread> threads;
+  std::vector<T> results(n_threads, initial_value);
   for (size_t i = 0; i < n_threads; ++i) {
     threads.emplace_back([&, i] {
+      T result = initial_value;
       auto from = begin + (i * size) / n_threads;
       auto to = begin + ((i + 1) * size) / n_threads;
       for (; from != to; ++from) {
         // result.store(func(result.load(), *from));
-        T tmp(result.load());
-        while (!result.compare_exchange_weak(tmp, func(*from, result))) {
-          std::this_thread::yield();
-        }
+        result = func(result, *from);
       }
+      results[i] = result;
     });
   }
   for (auto& thread : threads) {
     thread.join();
   }
-  return result.load();
+  return std::reduce(results.begin(), results.end(), initial_value, func);
 }
