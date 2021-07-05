@@ -26,6 +26,6 @@ class HelloWorld {
   }
 
  private:
-  size_t threads_count_;
+  const size_t threads_count_;
   std::mutex cout_mutex_;
 };
