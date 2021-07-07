@@ -27,7 +27,6 @@ class ThreadSafeQueue {
   }
 
   std::optional<T> TryPop() {
-    // Your code
     std::unique_lock<std::mutex> lock(mutex_);
     if (queue_.empty()) {
       return std::nullopt;
