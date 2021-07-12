@@ -20,17 +20,13 @@ class RWSpinLock {
     }
   }
 
-  void UnlockRead() {
-    while (lock_ < 2) {
-      std::this_thread::yield();
-    }
-    lock_ -= 2;
-  }
+  void UnlockRead() { lock_ -= 2; }
 
   void LockWrite() {
     while (true) {
       size_t current_state = lock_.load();
       if (current_state & 1) {
+        std::this_thread::yield();
         continue;
       }
       if (lock_.compare_exchange_weak(current_state, current_state + 1)) {
@@ -42,12 +38,7 @@ class RWSpinLock {
     }
   }
 
-  void UnlockWrite() {
-    while ((lock_ & 1) == 0) {
-      std::this_thread::yield();
-    }
-    --lock_;
-  }
+  void UnlockWrite() { --lock_; }
 
  private:
   std::atomic<size_t> lock_ = 0;
