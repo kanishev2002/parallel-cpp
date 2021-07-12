@@ -8,9 +8,7 @@ class TicketLock {
   TicketLock() {}
 
   void Lock() {
-    size_t ticket = new_ticket_.load();
-    while (!new_ticket_.compare_exchange_weak(ticket, ticket + 1)) {
-    }
+    size_t ticket = new_ticket_.fetch_add(1);
     while (ticket != now_serving_.load()) {
       std::this_thread::yield();
     }
