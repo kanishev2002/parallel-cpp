@@ -8,34 +8,36 @@ class MCSLock {
   MCSLock() {}
   struct Node {
     Node() : next(nullptr), locked(false) {}
-    Node* next;
-    bool locked;
+    std::atomic<Node*> next;
+    std::atomic<bool> locked;
   };
 
   void Lock() {
     Node* prev = last_.exchange(&node);
     if (prev != nullptr) {
-      node.locked = true;
-      prev->next = &node;
-      while (node.locked)
-        ;
+      node.locked.store(true);
+      prev->next.store(&node);
+      while (node.locked.load()) {
+        std::this_thread::yield();
+      }
     }
   }
 
   void Unlock() {
-    const auto next = node.next;
-    if (next == nullptr) {
+    if (node.next.load() == nullptr) {
       Node* expected = &node;
       if (last_.compare_exchange_weak(expected, nullptr)) {
         return;
       }
+      while (node.next.load() == nullptr) {
+      }
     }
-    while (next == nullptr)
-      ;
-    next->locked = false;
+
+    node.next.load()->locked = false;
+    node.next.store(nullptr);
   }
 
  private:
-  thread_local static inline Node node;
-  std::atomic<Node*> last_;
+  thread_local static Node node;
+  std::atomic<Node*> last_ = nullptr;
 };
